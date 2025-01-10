@@ -59,12 +59,11 @@ def lambda_handler(event, context):
     central_time = utc_now - timedelta(hours=6)  # Central Time is UTC-6
     today_date = central_time.strftime("%Y-%m-%d")
     
-    print(f"Fetching games for date: {today_date}")
+    print(f"Fetching play-by-play data for game ID 20767")
+
+    # New API URL
+    api_url = "https://replay.sportsdata.io/api/v3/nba/pbp/json/playbyplay/20767?key=54d189054e674dffa7cc77b4cc7465e5"
     
-    # Fetch data from the API
-    api_url = f"https://api.sportsdata.io/v3/nba/scores/json/GamesByDate/{today_date}?key={api_key}"
-    print(today_date)
-     
     try:
         with urllib.request.urlopen(api_url) as response:
             data = json.loads(response.read().decode())
@@ -73,9 +72,14 @@ def lambda_handler(event, context):
         print(f"Error fetching data from API: {e}")
         return {"statusCode": 500, "body": "Error fetching data"}
     
-    # Include all games (final, in-progress, and scheduled)
-    messages = [format_game_data(game) for game in data]
-    final_message = "\n---\n".join(messages) if messages else "No games available for today."
+    # Include game details
+    messages = []
+    if "Game" in data:
+        messages.append(format_game_data(data["Game"]))
+    else:
+        messages.append("Game details are unavailable.")
+
+    final_message = "\n---\n".join(messages) if messages else "No game details available."
     
     # Publish to SNS
     try:
